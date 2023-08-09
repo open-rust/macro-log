@@ -12,23 +12,25 @@ pub enum Level {
 
 #[cfg(not(target_os = "android"))]
 pub mod log {
+    use super::Level;
+    use crate::time::get_time;
+
+    pub fn print(level: Level, file: &str, line: u32, str: String) {
+        let time = get_time();
+        match level {
+            Level::ERROR => {
+                eprintln!("{time} - {}:{} -> {}", file!(), line!(), str);
+            },
+            _ => {
+                println!("{time} - {}:{} -> {}", file!(), line!(), str);
+            },
+        }
+    }
+
     #[macro_export]
     macro_rules! log {
         ($type: expr, $($arg: tt)+) => {{
-            use $crate::log::Level;
-            use $crate::time::get_time;
-
-            let time = get_time();
-            let level: Level = $type;
-            let str = format!($($arg)+);
-            match level {
-                Level::ERROR => {
-                    eprintln!("{time} - {}:{} -> {}", file!(), line!(), str);
-                },
-                _ => {
-                    println!("{time} - {}:{} -> {}", file!(), line!(), str);
-                },
-            }
+            $crate::log::log::print($type, file!(), line!(), format!($($arg)+));
         }}
     }
 
@@ -47,6 +49,8 @@ pub mod log {
 
 #[cfg(target_os = "android")]
 pub mod log {
+    use super::Level;
+    use crate::time::get_time;
     pub const FMT: *const u8 = "%s\0".as_ptr();
 
     extern {
@@ -55,18 +59,18 @@ pub mod log {
         pub fn __android_log_print(level: i32, tag: *const u8, fmt: *const u8, ...);
     }
 
+    pub fn print(level: Level, file: &str, line: u32, mut str: String) {
+        let tag = format!("{}:{}\0", file!(), line!());
+        str.push('\0');
+        unsafe {
+            __android_log_print(level as i32, tag.as_ptr(), FMT, str.as_ptr());
+        }
+    }
+
     #[macro_export]
     macro_rules! log {
         ($type: expr, $($arg: tt)+) => {{
-            use $crate::log::{Level, log};
-
-            let level: Level = $type;
-            let tag = format!("{}:{}\0", file!(), line!());
-            let mut str = format!($($arg)+);
-            str.push('\0');
-            unsafe {
-                log::__android_log_print(level as i32, tag.as_ptr(), log::FMT, str.as_ptr());
-            }
+            $crate::log::log::print($type, file!(), line!(), format!($($arg)+));
         }}
     }
     
@@ -88,7 +92,7 @@ pub mod inner {
     #[macro_export]
     macro_rules! d {
         ($($arg: tt)+) => {{
-            $crate::log::log::log!(Level::DEBUG, $($arg)+);
+            $crate::log::log::log!($crate::log::Level::DEBUG, $($arg)+);
         }}
     }
 
@@ -111,14 +115,14 @@ pub mod common {
     #[macro_export]
     macro_rules! i {
         ($($arg: tt)+) => {{
-            $crate::log::log::log!(Level::INFO, $($arg)+);
+            $crate::log::log::log!($crate::log::Level::INFO, $($arg)+);
         }}
     }
 
     #[macro_export]
     macro_rules! e {
         ($($arg: tt)+) => {{
-            $crate::log::log::log!(Level::ERROR, $($arg)+);
+            $crate::log::log::log!($crate::log::Level::ERROR, $($arg)+);
         }}
     }
 
