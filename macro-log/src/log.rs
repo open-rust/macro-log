@@ -19,10 +19,10 @@ pub mod log {
         let time = get_time();
         match level {
             Level::ERROR => {
-                eprintln!("{time} - {}:{} -> {}", file!(), line!(), str);
+                eprintln!("{time} - {}:{} -> {}", file, line, str);
             },
             _ => {
-                println!("{time} - {}:{} -> {}", file!(), line!(), str);
+                println!("{time} - {}:{} -> {}", file, line, str);
             },
         }
     }
@@ -60,7 +60,7 @@ pub mod log {
     }
 
     pub fn print(level: Level, file: &str, line: u32, mut str: String) {
-        let tag = format!("{}:{}\0", file!(), line!());
+        let tag = format!("{}:{}\0", file, line);
         str.push('\0');
         unsafe {
             __android_log_print(level as i32, tag.as_ptr(), FMT, str.as_ptr());
