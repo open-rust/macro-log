@@ -9,10 +9,10 @@ fn main() {
 extern "C" fn test<'a, T>(value: &'a T, another: (), )
 where T: std::fmt::UpperHex,
 {
-    println!("test run, value is: {:X}", value);
+    i!("test run, value is: {:X}", value);
     // `format_args!` cannot capture variables when the format string is expanded from a macro
     // println!("test run, value is: {value:X}"); // error: there is no argument named `value`
-    println!("test ok");
+    i!("test ok");
 }
 
 #[cfg(test)]
