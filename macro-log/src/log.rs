@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy)]
 pub enum Level {
     VERBOSE = 2,
     DEBUG,
@@ -10,8 +11,15 @@ pub enum Level {
     WTF,
 }
 
+impl Level {
+    fn tag(self: Self) -> &'static str {
+        let index = self as usize;
+        ["", "", "V", "D", "I", "W", "E", "WTF"][index]
+    }
+}
+
 #[cfg(not(target_os = "android"))]
-pub mod log {
+pub mod platform {
     use super::Level;
     use crate::time::get_time;
 
@@ -19,36 +27,27 @@ pub mod log {
         let time = get_time();
         match level {
             Level::ERROR => {
-                eprintln!("{time} - {}:{} -> {}", file, line, str);
+                eprintln!("{time} - [{tag}] - {}:{} -> {}", file, line, str, tag = level.tag());
             },
             _ => {
-                println!("{time} - {}:{} -> {}", file, line, str);
+                println!("{time} - [{tag}] - {}:{} -> {}", file, line, str, tag = level.tag());
             },
         }
     }
 
-    #[macro_export]
-    macro_rules! log {
-        ($type: expr, $($arg: tt)+) => {{
-            $crate::log::log::print($type, file!(), line!(), format!($($arg)+));
-        }}
-    }
-
+    #[cfg(debug_assertions)]
     #[macro_export]
     macro_rules! wtf {
-        ($($arg: expr $(,)?)+) => {{
+        ($($arg: expr $(,)?)+) => {
             $(
-                $crate::log::d!("{} = {:?}", stringify!($arg), $arg);
+                $crate::log!($crate::log::Level::WTF, "{} = {:?}", stringify!($arg), $arg);
             )+
-        }}
+        }
     }
-
-    pub use log;
-    pub use wtf;
 }
 
 #[cfg(target_os = "android")]
-pub mod log {
+pub mod platform {
     use super::Level;
     use crate::time::get_time;
     pub const FMT: *const u8 = "%s\0".as_ptr();
@@ -66,70 +65,67 @@ pub mod log {
             __android_log_print(level as i32, tag.as_ptr(), FMT, str.as_ptr());
         }
     }
-
-    #[macro_export]
-    macro_rules! log {
-        ($type: expr, $($arg: tt)+) => {{
-            $crate::log::log::print($type, file!(), line!(), format!($($arg)+));
-        }}
-    }
     
+    #[cfg(debug_assertions)]
     #[macro_export]
     macro_rules! wtf {
-        ($($arg: expr $(,)?)+) => {{
+        ($($arg: expr $(,)?)+) => {
             $(
-                $crate::log::e!("{} = {:?}", stringify!($arg), $arg);
+                $crate::log!($crate::log::Level::ERROR, "{} = {:?}", stringify!($arg), $arg);
             )+
-        }}
+        }
     }
-
-    pub use log;
-    pub use wtf;
 }
 
 #[cfg(debug_assertions)]
-pub mod inner {
+mod debug {
     #[macro_export]
     macro_rules! d {
-        ($($arg: tt)+) => {{
-            $crate::log::log::log!($crate::log::Level::DEBUG, $($arg)+);
-        }}
+        ($($arg: tt)+) => {
+            $crate::log!($crate::log::Level::DEBUG, $($arg)+);
+        }
     }
-
-    pub use super::log::wtf;
-    pub use d;
 }
 
 #[cfg(not(debug_assertions))]
-pub mod inner {
+mod release {
     #[macro_export]
-    macro_rules! empty {
+    macro_rules! wtf {
         ($($arg: tt)+) => (())
     }
 
-    pub use empty as d;
-    pub use empty as wtf;
+    #[macro_export]
+    macro_rules! d {
+        ($($arg: tt)+) => (())
+    }
 }
 
-pub mod common {
+mod common {
+    #[macro_export]
+    macro_rules! log {
+        ($type: expr, $($arg: tt)+) => {
+            $crate::log::platform::print($type, file!(), line!(), format!($($arg)+));
+        }
+    }
+
     #[macro_export]
     macro_rules! i {
-        ($($arg: tt)+) => {{
-            $crate::log::log::log!($crate::log::Level::INFO, $($arg)+);
-        }}
+        ($($arg: tt)+) => {
+            $crate::log!($crate::log::Level::INFO, $($arg)+);
+        }
+    }
+
+    #[macro_export]
+    macro_rules! w {
+        ($($arg: tt)+) => {
+            $crate::log!($crate::log::Level::WARN, $($arg)+);
+        }
     }
 
     #[macro_export]
     macro_rules! e {
-        ($($arg: tt)+) => {{
-            $crate::log::log::log!($crate::log::Level::ERROR, $($arg)+);
-        }}
+        ($($arg: tt)+) => {
+            $crate::log!($crate::log::Level::ERROR, $($arg)+);
+        }
     }
-
-    pub use super::log::log;
-    pub use i;
-    pub use e;
 }
-
-pub use inner::*; // d!() and wtf!() will be delete in release version.
-pub use common::*;
