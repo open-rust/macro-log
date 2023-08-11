@@ -1,21 +1,21 @@
+#![allow(unused)]
+
 use macro_log::*;
 
-#[prototype]
 fn main() {
-    test(&2147483647, (1), Arg::default());
-    test(&999, (2), Arg::default());
+    test(&2147483647, (1, 2), Arg::default());
+    test(&999, (2, 3), Arg::default());
 }
 
 #[derive(Default, Debug)]
-struct Arg {
+pub struct Arg {
     a: String,
     b: Vec<u8>,
     c: Vec<Vec<String>>,
 }
 
 #[debug]
-/* 参数中不能出现逗号，例如(i8, i8)不被允许 */
-extern "C" fn test<'a, T>(value: &'a T, another: (i8), Arg: Arg, )
+pub extern "C" fn test<'a, T>(value: &'a T, another: (i8, i8), arg: Arg, )
 where T: std::fmt::UpperHex + std::fmt::Debug,
 {
     i!("test run, value is: {:X}", value);

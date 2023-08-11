@@ -1,71 +1,28 @@
-use proc_macro::{TokenStream, TokenTree};
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::ItemFn;
 
-// 属性宏
+// see: https://dengjianping.github.io/2019/02/28/%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E4%B8%80%E4%B8%AA%E8%BF%87%E7%A8%8B%E5%AE%8F(proc-macro).html
 #[proc_macro_attribute]
-pub fn prototype(_args: TokenStream, item: TokenStream) -> TokenStream {
-    let mut new_fn = item.clone().into_iter().collect::<Vec<TokenTree>>();
-    let body = new_fn.pop().unwrap();
-    let new_stream = r##"
-        $fn {
-            macro_log::d!(r#"call $fn"#);
-            $body
-        }
-    "##
-        .replace("$fn", TokenStream::from_iter(new_fn.clone()).to_string().as_str())
-        .replace("$body", body.to_string().as_str())
-        .parse::<TokenStream>().unwrap();
-    // println!("stream: {}", new_stream);
-    return new_stream;
-    // new_fn.push(new_stream.into_iter().last().unwrap());
-    // return TokenStream::from_iter(new_fn);
-}
+pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
+    let func = syn::parse_macro_input!(func as ItemFn);
+    let func_vis = &func.vis; // pub
+    let func_block = &func.block; // { code block }
 
-// 属性宏
-#[proc_macro_attribute]
-pub fn debug(_args: TokenStream, item: TokenStream) -> TokenStream {
-    let mut tokens = item.clone().into_iter();
-    let mut func = "".to_owned();
-    let mut input = "".to_owned();
-    while let Some(token) = tokens.next() {
-        let symbol = token.to_string();
-        // println!("symbol -> {}", symbol);
-        if symbol == "fn" {
-            func = tokens.next().unwrap().to_string();
-        } else if symbol.starts_with("(") {
-            input = symbol.replacen("(", "", 1);
-            input.pop();
-            break;
+    let sig = &func.sig;
+    let func_constness = &sig.constness; // const
+    let func_name = &sig.ident; // fn name
+    let func_generics = &sig.generics; // <'a, T>
+    let func_where_clause = &func_generics.where_clause; // where
+    let func_inputs = &sig.inputs; // arguments
+    let func_output = &sig.output; // return value
+    
+    let caller = quote!{
+        #func_vis #func_constness fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
+            macro_log::d!("call fn {}()", stringify!(#func_name));
+            #func_block
         }
-        // println!("token -> {token} {:?}", token.span());
-    }
-    let arguments = input.split(",").filter(|&it| it != "").map(|it| it.trim()).collect::<Vec<&str>>();
-    // println!("arguments -> {:?}", arguments);
-    let mut new_fn = item.clone().into_iter().collect::<Vec<TokenTree>>();
-    let body = new_fn.pop().unwrap();
-    let mut values = "".to_owned();
-    let new_stream = r##"
-        $fn {
-            macro_log::d!(r#"call fn $func($arguments)"# $values);
-            $body
-        }
-    "##
-        .replace("$fn", TokenStream::from_iter(new_fn.clone()).to_string().as_str())
-        .replace("$func", &func)
-        .replace("$arguments", {
-            &arguments.iter().map(
-                |it| {
-                    let (name, vartype) = it.split_once(" : ").unwrap();
-                    // println!("var: {name}, type: {vartype}");
-                    values.push_str(&format!(",{name}"));
-                    format!("{name} = {display}", display = "{:?}")
-                }
-            ).collect::<Vec<String>>().join(", ")
-        })
-        .replace("$values", &values)
-        .replace("$body", body.to_string().as_str())
-        .parse::<TokenStream>().unwrap();
-    // println!("stream: {}", new_stream);
-    // return new_stream;
-    new_fn.push(new_stream.into_iter().last().unwrap());
-    return TokenStream::from_iter(new_fn);
+    };
+    // println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
+    caller.into() 
 }
