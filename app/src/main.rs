@@ -14,6 +14,13 @@ pub struct Arg {
     c: Vec<Vec<String>>,
 }
 
+impl Arg {
+    #[debug]
+    fn print(self: Self, some_arg: u8) {
+        i!("Arg: a = {:?}, b = {:?}, c = {:?}, some_arg = {:?}", self.a, self.b, self.c, some_arg);
+    }
+}
+
 #[debug]
 pub extern "C" fn test<'a, T>(value: &'a T, another: (i8, i8), arg: Arg, )
 where T: std::fmt::UpperHex + std::fmt::Debug,
@@ -21,6 +28,7 @@ where T: std::fmt::UpperHex + std::fmt::Debug,
     i!("test run, value is: {:X}", value);
     // `format_args!` cannot capture variables when the format string is expanded from a macro
     // println!("test run, value is: {value:X}"); // error: there is no argument named `value`
+    arg.print(88);
     i!("test ok");
 }
 
