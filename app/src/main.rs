@@ -1,6 +1,6 @@
 use macro_log::*;
 
-#[log_when_call]
+#[prototype]
 fn main() {
     test(&2147483647, (1), Arg::default());
     test(&999, (2), Arg::default());
@@ -13,7 +13,7 @@ struct Arg {
     c: Vec<Vec<String>>,
 }
 
-#[log_call_info]
+#[debug]
 /* 参数中不能出现逗号，例如(i8, i8)不被允许 */
 extern "C" fn test<'a, T>(value: &'a T, another: (i8), Arg: Arg, )
 where T: std::fmt::UpperHex + std::fmt::Debug,
@@ -29,8 +29,8 @@ mod tests {
     use macro_log::*;
 
     #[test]
-    fn test_make_compile_time_fn() {
-        make_compile_time_fn!(a, b);
-        compile_time_fn();
+    #[debug]
+    fn test() {
+        i!("Hello, test");
     }
 }

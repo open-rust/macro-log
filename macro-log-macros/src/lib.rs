@@ -1,20 +1,13 @@
 use proc_macro::{TokenStream, TokenTree};
 
-// 类函数宏
-#[proc_macro]
-pub fn make_compile_time_fn(item: TokenStream) -> TokenStream {
-    println!("make_compile_time_fn item: {:?}", item);
-    r#"fn compile_time_fn() -> () { macro_log::i!("This is compile_time_fn()"); }"#.parse().unwrap()
-}
-
 // 属性宏
 #[proc_macro_attribute]
-pub fn log_when_call(_args: TokenStream, item: TokenStream) -> TokenStream {
+pub fn prototype(_args: TokenStream, item: TokenStream) -> TokenStream {
     let mut new_fn = item.clone().into_iter().collect::<Vec<TokenTree>>();
     let body = new_fn.pop().unwrap();
     let new_stream = r##"
         $fn {
-            macro_log::i!(r#"call $fn"#);
+            macro_log::d!(r#"call $fn"#);
             $body
         }
     "##
@@ -29,7 +22,7 @@ pub fn log_when_call(_args: TokenStream, item: TokenStream) -> TokenStream {
 
 // 属性宏
 #[proc_macro_attribute]
-pub fn log_call_info(_args: TokenStream, item: TokenStream) -> TokenStream {
+pub fn debug(_args: TokenStream, item: TokenStream) -> TokenStream {
     let mut tokens = item.clone().into_iter();
     let mut func = "".to_owned();
     let mut input = "".to_owned();
@@ -52,7 +45,7 @@ pub fn log_call_info(_args: TokenStream, item: TokenStream) -> TokenStream {
     let mut values = "".to_owned();
     let new_stream = r##"
         $fn {
-            macro_log::i!(r#"call fn $func($arguments)"# $values);
+            macro_log::d!(r#"call fn $func($arguments)"# $values);
             $body
         }
     "##
