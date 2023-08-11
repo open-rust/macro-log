@@ -2,6 +2,7 @@
 name = "macro-log"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 repository = "https://github.com/develon2015/macro-log"
 homepage = "https://github.com/develon2015/macro-log"
 description = """
