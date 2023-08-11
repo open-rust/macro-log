@@ -41,24 +41,37 @@ pub fn log_call_info(_args: TokenStream, item: TokenStream) -> TokenStream {
         } else if symbol.starts_with("(") {
             input = symbol.replacen("(", "", 1);
             input.pop();
+            break;
         }
         // println!("token -> {token} {:?}", token.span());
     }
-    println!("参数: {input}");
+    let arguments = input.split(",").filter(|&it| it != "").map(|it| it.trim()).collect::<Vec<&str>>();
+    // println!("arguments -> {:?}", arguments);
     let mut new_fn = item.clone().into_iter().collect::<Vec<TokenTree>>();
     let body = new_fn.pop().unwrap();
+    let mut values = "".to_owned();
     let new_stream = r##"
         $fn {
-            macro_log::i!(r#"call fn $func($input)"#);
+            macro_log::i!(r#"call fn $func($arguments)"# $values);
             $body
         }
     "##
         .replace("$fn", TokenStream::from_iter(new_fn.clone()).to_string().as_str())
         .replace("$func", &func)
-        .replace("$input", &input)
+        .replace("$arguments", {
+            &arguments.iter().map(
+                |it| {
+                    let (name, vartype) = it.split_once(" : ").unwrap();
+                    // println!("var: {name}, type: {vartype}");
+                    values.push_str(&format!(",{name}"));
+                    format!("{name} = {display}", display = "{:?}")
+                }
+            ).collect::<Vec<String>>().join(", ")
+        })
+        .replace("$values", &values)
         .replace("$body", body.to_string().as_str())
         .parse::<TokenStream>().unwrap();
-    println!("stream: {}", new_stream);
+    // println!("stream: {}", new_stream);
     // return new_stream;
     new_fn.push(new_stream.into_iter().last().unwrap());
     return TokenStream::from_iter(new_fn);
