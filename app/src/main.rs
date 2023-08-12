@@ -16,7 +16,7 @@ pub struct Arg {
 
 impl Arg {
     #[debug]
-    fn print(self: Self, some_arg: u8) {
+    fn print(self: Self, some_arg: u8, _: (), _: u32) {
         i!("Arg: a = {:?}, b = {:?}, c = {:?}, some_arg = {:?}", self.a, self.b, self.c, some_arg);
     }
 }
@@ -28,7 +28,7 @@ where T: std::fmt::UpperHex + std::fmt::Debug,
     i!("test run, value is: {:X}", value);
     // `format_args!` cannot capture variables when the format string is expanded from a macro
     // println!("test run, value is: {value:X}"); // error: there is no argument named `value`
-    arg.print(88);
+    arg.print(88, (), 0xff);
     i!("test ok");
 }
 

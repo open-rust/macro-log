@@ -57,11 +57,19 @@ fn parse_args(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
 
 /// for quote!{ macro_log::d!(#format, #values); }
 fn get_log_format_values(func_name: &str, args: Vec<String>) -> (String, proc_macro2::TokenStream) {
-    let format_args = args.iter().map(|it| format!("{it} = {{:?}}")).collect::<Vec<String>>().join(", ");
+    let format_args = args.iter()
+        .map(|it| if it.as_str() != "_" {
+            format!("{it} = {{:?}}")
+        } else {
+            "_ = ?".to_string()
+        })
+        .collect::<Vec<String>>().join(", ");
     let format = format!("call fn {func_name}({format_args})");
     // println!("format -> {format:?}"); // format -> "call fn test(value = {:?}, another = {:?}, arg = {:?})"
 
-    let values = args.iter().map(|it| format!("{it}")).collect::<Vec<String>>().join(",");
+    let values = args.iter()
+        .filter(|it| it.as_str() != "_")
+        .map(|it| format!("{it}")).collect::<Vec<String>>().join(",");
     let values = values.parse::<proc_macro2::TokenStream>().unwrap();
     // println!("values -> {values}"); // values -> value, another, arg
 
