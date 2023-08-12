@@ -19,13 +19,7 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
     let func_output = &sig.output; // return value
     
     let args = parse_args(func_inputs);
-    let format_args = args.iter().map(|it| format!("{it} = {{:?}}")).collect::<Vec<String>>().join(", ");
-    let format = format!("call fn {func_name}({format_args})");
-    // println!("format -> {format:?}"); // format -> "call fn test(value = {:?}, another = {:?}, arg = {:?})"
-
-    let values = args.iter().map(|it| format!("{it}")).collect::<Vec<String>>().join(",");
-    let values = values.parse::<proc_macro2::TokenStream>().unwrap();
-    // println!("values -> {values}"); // values -> value, another, arg
+    let (format, values) = get_log_format_values(&func_name.to_string(), args);
 
     let caller = quote!{
         #func_vis #func_constness #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
@@ -33,12 +27,12 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
             #func_block
         }
     };
-    // println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
+    println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
     caller.into()
 }
 
 fn parse_args(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
-    let mut result = vec![];
+    let mut args = vec![];
     for arg in func_inputs.into_iter() {
         match arg {
             // The self argument of an associated method
@@ -47,16 +41,29 @@ fn parse_args(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
                 let tokens = quote!(#arg).to_string();
                 // println!("tokens -> {:?}", tokens); // tokens -> "value : & 'a T"
                 let (name, _vartype) = tokens.split_once(" : ").unwrap();
-                result.push(name.into());
+                args.push(name.into());
             }
             // A function argument accepted by pattern and type
             FnArg::Typed(_) => { // _ same as arg
                 let tokens = quote!(#arg).to_string();
                 // println!("tokens -> {:?}", tokens); // tokens -> "value : & 'a T"
                 let (name, _vartype) = tokens.split_once(" : ").unwrap();
-                result.push(name.into());
+                args.push(name.into());
             }
         }
     }
-    result
+    args
+}
+
+/// for quote!{ macro_log::d!(#format, #values); }
+fn get_log_format_values(func_name: &str, args: Vec<String>) -> (String, proc_macro2::TokenStream) {
+    let format_args = args.iter().map(|it| format!("{it} = {{:?}}")).collect::<Vec<String>>().join(", ");
+    let format = format!("call fn {func_name}({format_args})");
+    // println!("format -> {format:?}"); // format -> "call fn test(value = {:?}, another = {:?}, arg = {:?})"
+
+    let values = args.iter().map(|it| format!("{it}")).collect::<Vec<String>>().join(",");
+    let values = values.parse::<proc_macro2::TokenStream>().unwrap();
+    // println!("values -> {values}"); // values -> value, another, arg
+
+    (format, values)
 }
