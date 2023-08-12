@@ -20,14 +20,24 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
     
     let args = parse_args(func_inputs);
     let (format, values) = get_log_format_values(&func_name.to_string(), args);
+    let log = match func_output {
+        syn::ReturnType::Default => quote! {
+            macro_log::d!("{}", call);
+        },
+        syn::ReturnType::Type(_, _) => quote! {
+            macro_log::d!("{} => {:?}", call, return_value);
+        },
+    };
 
-    let caller = quote!{
+    let caller = quote! {
         #func_vis #func_constness #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
-            macro_log::d!(#format, #values);
-            #func_block
+            let call = format!(#format, #values);
+            let return_value = #func_block;
+            #log
+            return_value
         }
     };
-    println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
+    // println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
     caller.into()
 }
 

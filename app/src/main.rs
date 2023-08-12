@@ -2,6 +2,7 @@
 
 use macro_log::*;
 
+#[debug]
 fn main() {
     test(&2147483647, (1, 2), Arg::default());
     test(&999, (2, 3), Arg::default());
@@ -22,7 +23,7 @@ impl Arg {
 }
 
 #[debug]
-pub extern "C" fn test<'a, T>(value: &'a T, another: (i8, i8), arg: Arg, )
+pub extern "C" fn test<'a, T>(value: &'a T, another: (i8, i8), arg: Arg, ) -> &'a T
 where T: std::fmt::UpperHex + std::fmt::Debug,
 {
     i!("test run, value is: {:X}", value);
@@ -30,6 +31,7 @@ where T: std::fmt::UpperHex + std::fmt::Debug,
     // println!("test run, value is: {value:X}"); // error: there is no argument named `value`
     arg.print(88, (), 0xff);
     i!("test ok");
+    value
 }
 
 #[cfg(test)]
