@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
-use quote::quote;
-use syn::{ItemFn, FnArg, punctuated::Punctuated, token::Comma};
+use quote::{quote, ToTokens};
+use syn::{ItemFn, FnArg, punctuated::Punctuated, token::Comma, Attribute};
 
 // see: https://dengjianping.github.io/2019/02/28/%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E4%B8%80%E4%B8%AA%E8%BF%87%E7%A8%8B%E5%AE%8F(proc-macro).html
 
@@ -22,6 +22,8 @@ pub fn debug(args: TokenStream, func: TokenStream) -> TokenStream {
 
 fn parse(_: TokenStream, func: TokenStream, when: When) -> TokenStream {
     let func = syn::parse_macro_input!(func as ItemFn);
+    let func_attrs = func.attrs; // e.g. #[derive(xx)]
+    let attrs = parse_attrs(func_attrs);
     let func_vis = &func.vis; // pub
     let func_block = &func.block; // { code block }
 
@@ -55,12 +57,14 @@ fn parse(_: TokenStream, func: TokenStream, when: When) -> TokenStream {
 
     let caller = match when {
         When::Call => quote! {
+            #attrs
             #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
                 #log
                 #func_block
             }
         },
         When::Return => quote! {
+            #attrs
             #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
                 let call = format!(#format, #values);
                 let return_value = #func_block;
@@ -69,10 +73,20 @@ fn parse(_: TokenStream, func: TokenStream, when: When) -> TokenStream {
             }
         },
     };
-    println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
+    // println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
     caller.into()
 }
 
+/// #[xxx] #[xxx]
+fn parse_attrs(attrs: Vec<Attribute>) -> proc_macro2::TokenStream {
+    attrs
+        .iter()
+        .map(|attr| attr.to_token_stream().to_string())
+        .collect::<Vec<String>>().join(" ")
+        .parse().unwrap()
+}
+
+/// fn(a: ?, b: ?) -> ["a", "b"]
 fn parse_params(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
     let mut args = vec![];
     for arg in func_inputs.into_iter() {

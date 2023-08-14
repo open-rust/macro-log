@@ -3,6 +3,7 @@
 use macro_log::*;
 
 #[param]
+#[debug]
 fn main() {
     test(&2147483647, (1, 2), Arg::default());
     test(&999, (2, 3), Arg::default());
