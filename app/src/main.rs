@@ -34,6 +34,11 @@ where T: std::fmt::UpperHex + std::fmt::Debug,
     value
 }
 
+#[debug]
+async fn async_fn() {
+    i!("Hello, async fn!");
+}
+
 #[cfg(test)]
 mod tests {
     use macro_log::*;

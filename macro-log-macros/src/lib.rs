@@ -11,6 +11,7 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
 
     let sig = &func.sig;
     let func_constness = &sig.constness; // const
+    let func_async = &sig.asyncness; // const
     let func_abi = &sig.abi; // extern "abi"
     let func_name = &sig.ident; // fn name
     let func_generics = &sig.generics; // <'a, T>
@@ -30,7 +31,7 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
     };
 
     let caller = quote! {
-        #func_vis #func_constness #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
+        #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
             let call = format!(#format, #values);
             let return_value = #func_block;
             #log
