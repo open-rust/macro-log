@@ -3,8 +3,24 @@ use quote::quote;
 use syn::{ItemFn, FnArg, punctuated::Punctuated, token::Comma};
 
 // see: https://dengjianping.github.io/2019/02/28/%E5%A6%82%E4%BD%95%E7%BC%96%E5%86%99%E4%B8%80%E4%B8%AA%E8%BF%87%E7%A8%8B%E5%AE%8F(proc-macro).html
+
+#[derive(Clone, Copy)]
+enum When {
+    Call,
+    Return,
+}
+
 #[proc_macro_attribute]
-pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
+pub fn param(args: TokenStream, func: TokenStream) -> TokenStream {
+    parse(args, func, When::Call)
+}
+
+#[proc_macro_attribute]
+pub fn debug(args: TokenStream, func: TokenStream) -> TokenStream {
+    parse(args, func, When::Return)
+}
+
+fn parse(_: TokenStream, func: TokenStream, when: When) -> TokenStream {
     let func = syn::parse_macro_input!(func as ItemFn);
     let func_vis = &func.vis; // pub
     let func_block = &func.block; // { code block }
@@ -19,30 +35,45 @@ pub fn debug(_: TokenStream, func: TokenStream) -> TokenStream {
     let func_inputs = &sig.inputs; // arguments
     let func_output = &sig.output; // return value
     
-    let args = parse_args(func_inputs);
-    let (format, values) = get_log_format_values(&func_name.to_string(), args);
-    let log = match func_output {
-        syn::ReturnType::Default => quote! {
+    let params = parse_params(func_inputs);
+    let (format, values) = get_log_format_values(&func_name.to_string(), params);
+    let format = match when {
+        When::Call => format!("call {format}"),
+        When::Return => format!("called {format}"),
+    };
+    let log = match (when, func_output) {
+        (When::Call, _) => quote! {
+            macro_log::d!(#format, #values);
+        },
+        (_, syn::ReturnType::Default) => quote! {
             macro_log::d!("{}", call);
         },
-        syn::ReturnType::Type(_, _) => quote! {
+        (_, syn::ReturnType::Type(_, _)) => quote! {
             macro_log::d!("{} => {:?}", call, return_value);
         },
     };
 
-    let caller = quote! {
-        #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
-            let call = format!(#format, #values);
-            let return_value = #func_block;
-            #log
-            return_value
-        }
+    let caller = match when {
+        When::Call => quote! {
+            #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
+                #log
+                #func_block
+            }
+        },
+        When::Return => quote! {
+            #func_vis #func_constness #func_async #func_abi fn #func_name #func_generics(#func_inputs) #func_output #func_where_clause {
+                let call = format!(#format, #values);
+                let return_value = #func_block;
+                #log
+                return_value
+            }
+        },
     };
-    // println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
+    println!("compile result: \n---------------------\n{}\n---------------------", caller.to_string());
     caller.into()
 }
 
-fn parse_args(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
+fn parse_params(func_inputs: &Punctuated<FnArg, Comma>) -> Vec<String> {
     let mut args = vec![];
     for arg in func_inputs.into_iter() {
         match arg {
@@ -75,7 +106,7 @@ fn get_log_format_values(func_name: &str, args: Vec<String>) -> (String, proc_ma
             "_ = ?".to_string()
         })
         .collect::<Vec<String>>().join(", ");
-    let format = format!("call fn {func_name}({format_args})");
+    let format = format!("fn {func_name}({format_args})");
     // println!("format -> {format:?}"); // format -> "call fn test(value = {:?}, another = {:?}, arg = {:?})"
 
     let values = args.iter()

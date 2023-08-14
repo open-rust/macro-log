@@ -2,7 +2,7 @@
 
 use macro_log::*;
 
-#[debug]
+#[param]
 fn main() {
     test(&2147483647, (1, 2), Arg::default());
     test(&999, (2, 3), Arg::default());
@@ -26,7 +26,8 @@ impl Arg {
 pub extern "C" fn test<'a, T>(value: &'a T, another: (i8, i8), arg: Arg, ) -> &'a T
 where T: std::fmt::UpperHex + std::fmt::Debug,
 {
-    i!("test run, value is: {:X}", value);
+    i!("test run, value is: {value:X}");
+    // For v0.1:
     // `format_args!` cannot capture variables when the format string is expanded from a macro
     // println!("test run, value is: {value:X}"); // error: there is no argument named `value`
     arg.print(88, (), 0xff);
