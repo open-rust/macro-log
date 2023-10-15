@@ -1,3 +1,4 @@
+mod fs;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{ItemFn, FnArg, punctuated::Punctuated, token::Comma, Attribute};
@@ -18,6 +19,11 @@ pub fn param(args: TokenStream, func: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn debug(args: TokenStream, func: TokenStream) -> TokenStream {
     parse(args, func, When::Return)
+}
+
+#[proc_macro]
+pub fn read_dir(args: TokenStream) -> TokenStream {
+    fs::read_dir(args)
 }
 
 fn parse(_: TokenStream, func: TokenStream, when: When) -> TokenStream {

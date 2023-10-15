@@ -1,6 +1,6 @@
 [package]
 name = "macro-log"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/develon2015/macro-log"
@@ -17,4 +17,4 @@ chrono = "0.4.26"
 
 [dependencies.macro-log-macros]
 path = "../macro-log-macros"
-version = "0.2.0"
+version = "0.3.0"
